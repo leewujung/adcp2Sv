@@ -90,3 +90,55 @@ plt.show()
 # ## Loading net time-depth trajectory
 
 # Let's now try putting the net tow time-depth trajectory onto the echogram to see which were the layers we actually sampled.
+
+# In[140]:
+
+
+import pandas as pd
+from pytz import common_timezones
+
+
+# In[148]:
+
+
+common_timezones
+
+
+# In[124]:
+
+
+csv_pname = '/Volumes/Transcend/Dropbox/Z_wjlee/20180719_ooi_cruise/net_tow/'
+csv_fname = '20180721_EAO600m_tow.csv'
+
+
+# In[145]:
+
+
+net = pd.read_csv(csv_pname+csv_fname,                 names=['Index','Device_ID','File_ID',                        'year','month','day','hour','minute','second',                        'Offset','Pressure','Temperature'])
+
+
+# Now we mess around with the timestamps from the ADCP and the time-depth sensor on the net. The goal is to plot the time-depth trajectory directly on the ADCP echogram.
+
+# First we create a `datetime` string for the time-depth sensor on the net.
+
+# In[146]:
+
+
+net_timestamp = pd.to_datetime(net.loc[:, 'year':'second'])
+net_timestamp = net_timestamp.dt.tz_localize('US/Pacific')
+
+
+# And then we create a `datetime` string for the ADCP data.
+
+# In[162]:
+
+
+adcp_timestack = np.vstack((data_150.rVL['Year']+2000,data_150.rVL['Month'],data_150.rVL['Day'],                             data_150.rVL['Hour'],data_150.rVL['Minute'],data_150.rVL['Second'])).T
+
+
+# In[176]:
+
+
+adcp_timestamp = pd.to_datetime(pd.DataFrame(adcp_timestack,columns=['year','month','day','hour','minute','second']))
+adcp_timestamp = adcp_timestamp.dt.tz_localize('UTC')
+
