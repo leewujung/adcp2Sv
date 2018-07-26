@@ -33,9 +33,9 @@ def load_raw_files(filename):
     tmp = os.path.basename(os.path.dirname(filename[0]))
     freq = int(re.split('os*',tmp)[1])*1000  # get ADCP frequency [Hz]
     
-    print 'Loading files... (os'+str(freq/1000)+')'
+    print('Loading files... (os'+str(freq/1000)+')')
     for f in filename:  # print files that are being loaded
-        print '  '+os.path.basename(f) 
+        print('  '+os.path.basename(f))
     m = Multiread(filename,'os')  # read the latest nf files
     data = m.read()
     
@@ -53,20 +53,8 @@ def load_raw_files(filename):
     
 
 def get_ping_time(data,ping_num):
-    return [str(data.rVL['Second'][x])+':'+str(data.rVL['Second'][x])+':'+str(data.rVL['Second'][x]) for x in ping_num]
+    return [str(data.rVL['Hour'][x])+':'+str(data.rVL['Minute'][x]) for x in ping_num]
     
-
-#def dday2timestr(yr,dday):
-#    ''' 
-#    Convert dday to str of timestamp
-#    yr     data.yearbase
-#    dday   one or more items in a list from data.dday
-#    '''
-#    yr1day = jdcal.gcal2jd(yr,1,1)  # get numbers for start of the year
-#    gcal = [jdcal.jd2gcal(yr1day[0],yr1day[1]+x) for x in np.nditer(dday)]
-#    td = [datetime.datetime(year=xx[0],month=xx[1],day=xx[2])+datetime.timedelta(days=xx[-1]) for xx in gcal]
-#    return [x.strftime('%H:%M:%S') for x in td]
-
 
 def plot_echogram_ax(ax,val_mtx,ping_num,time_str,depth,caxis):
     '''
@@ -77,7 +65,7 @@ def plot_echogram_ax(ax,val_mtx,ping_num,time_str,depth,caxis):
        val_mtx   values to be plotted, can be data.amp or with compensation
        ping_num  the ping number to be plotted (slice indexing)
        time_str  use dday2timestr to get trabsmit time
-       depth     data.dep
+       depth     actual bin depth [m]
     '''
     im = ax.imshow(val_mtx.T,aspect='auto',interpolation='none',\
                extent=[0,val_mtx.shape[0],-depth[-1],-depth[0]],\
