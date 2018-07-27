@@ -10,7 +10,7 @@
 # ## Loading ADCP raw beam data
 # First let's load in some libraries we will need to read and plot the data.
 
-# In[70]:
+# In[1]:
 
 
 import os, re, glob
@@ -27,7 +27,7 @@ import adcp_func
 
 # Find out what are the available ADCP raw files.
 
-# In[47]:
+# In[2]:
 
 
 # Set up paths and params
@@ -43,7 +43,7 @@ fname_150
 # 
 # Let's give it a try!
 
-# In[67]:
+# In[3]:
 
 
 m_150,data_150,param_150 = adcp_func.load_raw_files([pname_150+'rr2018_202_07200.raw',pname_150+'rr2018_202_14400.raw'])
@@ -51,7 +51,7 @@ m_150,data_150,param_150 = adcp_func.load_raw_files([pname_150+'rr2018_202_07200
 
 # Next we grab the time stamp from the ADCP raw data stream.
 
-# In[68]:
+# In[216]:
 
 
 # set up x-axis (time stamp) for ADCP data
@@ -62,7 +62,7 @@ time_str_150 = [str('%02d'%data_150.rVL['Hour'][x])+':'+str('%02d'%data_150.rVL[
 
 # Let's plot and check if the data make sense.
 
-# In[69]:
+# In[217]:
 
 
 val_mtx = data_150.amp1-param_150['absorption']-2*param_150['spreading_loss']
@@ -91,54 +91,246 @@ plt.show()
 
 # Let's now try putting the net tow time-depth trajectory onto the echogram to see which were the layers we actually sampled.
 
-# In[140]:
+# In[218]:
 
 
 import pandas as pd
 from pytz import common_timezones
 
 
-# In[148]:
-
-
-common_timezones
-
-
-# In[124]:
+# In[219]:
 
 
 csv_pname = '/Volumes/Transcend/Dropbox/Z_wjlee/20180719_ooi_cruise/net_tow/'
 csv_fname = '20180721_EAO600m_tow.csv'
 
 
-# In[145]:
+# In[220]:
 
 
 net = pd.read_csv(csv_pname+csv_fname,                 names=['Index','Device_ID','File_ID',                        'year','month','day','hour','minute','second',                        'Offset','Pressure','Temperature'])
 
 
+# In[221]:
+
+
+net['second'] = net['Offset']
+
+
+# ## Plotting net time-depth trajectory on ADCP echogram
+
 # Now we mess around with the timestamps from the ADCP and the time-depth sensor on the net. The goal is to plot the time-depth trajectory directly on the ADCP echogram.
 
 # First we create a `datetime` string for the time-depth sensor on the net.
 
-# In[146]:
+# In[222]:
 
 
 net_timestamp = pd.to_datetime(net.loc[:, 'year':'second'])
-net_timestamp = net_timestamp.dt.tz_localize('US/Pacific')
+net_timestamp = net_timestamp.dt.tz_localize('US/Pacific').dt.tz_convert('UTC')  # convert from Pacific to UTC
+
+
+# In[223]:
+
+
+net_depth = pd.Series((net['Pressure']-1013.25)*0.010197442889221,name='depth')
+
+
+# In[224]:
+
+
+net = pd.Series(net_depth.values,index=net_timestamp.values)
 
 
 # And then we create a `datetime` string for the ADCP data.
 
-# In[162]:
+# In[225]:
 
 
 adcp_timestack = np.vstack((data_150.rVL['Year']+2000,data_150.rVL['Month'],data_150.rVL['Day'],                             data_150.rVL['Hour'],data_150.rVL['Minute'],data_150.rVL['Second'])).T
 
 
-# In[176]:
+# In[226]:
 
 
 adcp_timestamp = pd.to_datetime(pd.DataFrame(adcp_timestack,columns=['year','month','day','hour','minute','second']))
 adcp_timestamp = adcp_timestamp.dt.tz_localize('UTC')
+
+
+# Now we want to interpolate the net time-depth trajectory onto the same time indices as the ADCP data.
+
+# In[227]:
+
+
+x = pd.concat([net, pd.Series(index=adcp_timestamp)])
+net_depth_on_adcp_timestamp = x.groupby(x.index).first().sort_index().interpolate(method='nearest')[adcp_timestamp]
+
+
+# And then we are ready to plot them together!
+
+# In[228]:
+
+
+val_mtx = data_150.amp1-param_150['absorption']-2*param_150['spreading_loss']
+actual_depth_bin = np.round(param_150['range'],2)
+val_mtx.shape
+
+
+# In[233]:
+
+
+# Plotting
+# ADCP echogram
+fig = plt.figure(figsize=(10,6))
+ax = fig.add_subplot(1,1,1)
+im = ax.imshow(val_mtx.T,aspect='auto',interpolation='none',               extent=[500,5000,actual_depth_bin[-1],actual_depth_bin[0]],               vmin=160, vmax=260)
+# divider = make_axes_locatable(ax)
+# cax = divider.append_axes("right", size="1%", pad=0.05)
+# cbar = plt.colorbar(im,cax=cax)
+# cbar.ax.tick_params(labelsize=14)
+ax.set_xticks(ping_num_150)
+ax.set_xticklabels(time_str_150,fontsize=16)
+ax.set_xlabel('UTC Time (hr:min)',fontsize=18)
+ax.set_yticklabels(np.arange(0,400,50),fontsize=16)
+ax.set_ylabel('Depth (m)',fontsize=18)
+ax.set_ylim([350,0])
+ax.set_title('ADCP 150 kHz "echogram"',fontsize=18)
+
+# Net tow trajectory
+ax.plot(net_depth_on_adcp_timestamp.values,color='w',linewidth=3)
+
+# Annotation
+ax.text(x=2700,y=220,s='Net trajectory',color='w',fontsize=22)
+# ax.annotate('Net trajectory', xy=(3000, 200), xytext=(3000, 230),
+#             arrowprops=dict(facecolor='w', edgecolor='w', shrink=0.05))
+
+plt.savefig('/Volumes/Transcend/Dropbox/Z_wjlee/20180719_ooi_cruise/net_tow/2018-07-21-adcp-tow.png',dpi=150)
+plt.show()
+
+
+# ## Messing around with seaborn but it didn't quite work...
+
+# In[26]:
+
+
+adcp_depth = pd.Series(actual_depth_bin,name='depth')
+
+
+# In[27]:
+
+
+# Convert ADCP echogram to DataFrame
+adcp_echogram = pd.DataFrame(val_mtx)
+
+
+# In[28]:
+
+
+adcp_echogram.shape
+
+
+# In[29]:
+
+
+adcp_echogram.columns = adcp_depth
+adcp_echogram.index = adcp_timestamp.dt.strftime('%H:%M')
+
+
+# In[30]:
+
+
+adcp_echogram
+
+
+# In[31]:
+
+
+idx_jump = int(np.floor(adcp_echogram.shape[0]/8))
+idx_cnt = np.arange(0,adcp_echogram.shape[0],idx_jump)
+adcp_echogram.shape
+
+
+# In[32]:
+
+
+import seaborn as sns
+sns.set()
+
+
+# In[ ]:
+
+
+fig = plt.figure(figsize=(16,4))
+ax = fig.add_subplot(1,1,1)
+g = sns.heatmap(adcp_echogram.T,ax=ax,cmap='viridis',vmax=260,vmin=160,xticklabels=1000,yticklabels=10)
+
+g.set_xlabel('UTC Time (hr:min)',fontsize=16,fontweight='bold')
+g.set_ylabel('Depth (m)',fontsize=16,fontweight='bold')
+sns.set_style("ticks")
+g.tick_params(labelsize=14)
+
+sns.lineplot(data=net_td)
+# net_td.plot(ax=ax)
+# ax.plot(net_td.index,net_td.depth,color='w',linewidth=10)
+# sns.lineplot(data=net_td,color='w')
+# sns.lineplot(data=net_td,color='w',alpha=0.7)
+
+plt.show()
+
+
+# In[41]:
+
+
+fig = plt.figure(figsize=(16,4))
+ax = fig.add_subplot(1,1,1)
+ax.plot(net_timestamp,net_td.depth,color='g')
+
+
+# In[44]:
+
+
+sns.tsplot(data=net_td.depth,time=net_td.index)
+
+
+# In[45]:
+
+
+net_td.plot()
+
+
+# In[139]:
+
+
+type(net_depth_on_adcp_timestamp)
+
+
+# In[26]:
+
+
+pd.concat([data, ts]).sort_index().interpolate().reindex(ts.index)
+
+
+# In[27]:
+
+
+pd.concat([data, ts]).sort_index().interpolate()[ts.index]
+
+
+# In[29]:
+
+
+x = pd.concat([data, ts])
+x.groupby(x.index).first()
+
+
+# In[30]:
+
+
+x.index
+
+
+# In[33]:
+
+
+x
 
