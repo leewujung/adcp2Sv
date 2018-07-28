@@ -167,7 +167,7 @@ net_depth_on_adcp_timestamp = x.groupby(x.index).first().sort_index().interpolat
 
 # And then we are ready to plot them together!
 
-# In[146]:
+# In[159]:
 
 
 val_mtx = data_150.amp1-param_150['absorption']-2*param_150['spreading_loss']
@@ -175,7 +175,7 @@ actual_depth_bin = np.round(param_150['range'],2)
 val_mtx.shape
 
 
-# In[157]:
+# In[166]:
 
 
 # Plotting
@@ -187,11 +187,13 @@ im = ax.imshow(val_mtx.T,aspect='auto',interpolation='none',               exten
 # cax = divider.append_axes("right", size="1%", pad=0.05)
 # cbar = plt.colorbar(im,cax=cax)
 # cbar.ax.tick_params(labelsize=14)
+
 ax.set_xticks(ping_num_150)
 ax.set_xticklabels(time_str_150,fontsize=16)
 ax.set_xlabel('UTC Time (hr:min)',fontsize=18)
 ax.set_yticklabels(np.arange(0,400,50),fontsize=16)
 ax.set_ylabel('Depth (m)',fontsize=18)
+ax.set_xlim([1500,5500])
 ax.set_ylim([350,0])
 ax.set_title('ADCP 150 kHz "echogram"',fontsize=18)
 
@@ -203,131 +205,4 @@ ax.text(x=3300,y=170,s='Net trajectory',color='w',fontsize=22)
 
 plt.savefig('/Volumes/Transcend/Dropbox/Z_wjlee/20180719_ooi_cruise/net_tow/2018-07-23-adcp-tow.png',dpi=150)
 plt.show()
-
-
-# ## Messing around with seaborn but it didn't quite work...
-
-# In[26]:
-
-
-adcp_depth = pd.Series(actual_depth_bin,name='depth')
-
-
-# In[27]:
-
-
-# Convert ADCP echogram to DataFrame
-adcp_echogram = pd.DataFrame(val_mtx)
-
-
-# In[28]:
-
-
-adcp_echogram.shape
-
-
-# In[29]:
-
-
-adcp_echogram.columns = adcp_depth
-adcp_echogram.index = adcp_timestamp.dt.strftime('%H:%M')
-
-
-# In[30]:
-
-
-adcp_echogram
-
-
-# In[31]:
-
-
-idx_jump = int(np.floor(adcp_echogram.shape[0]/8))
-idx_cnt = np.arange(0,adcp_echogram.shape[0],idx_jump)
-adcp_echogram.shape
-
-
-# In[32]:
-
-
-import seaborn as sns
-sns.set()
-
-
-# In[ ]:
-
-
-fig = plt.figure(figsize=(16,4))
-ax = fig.add_subplot(1,1,1)
-g = sns.heatmap(adcp_echogram.T,ax=ax,cmap='viridis',vmax=260,vmin=160,xticklabels=1000,yticklabels=10)
-
-g.set_xlabel('UTC Time (hr:min)',fontsize=16,fontweight='bold')
-g.set_ylabel('Depth (m)',fontsize=16,fontweight='bold')
-sns.set_style("ticks")
-g.tick_params(labelsize=14)
-
-sns.lineplot(data=net_td)
-# net_td.plot(ax=ax)
-# ax.plot(net_td.index,net_td.depth,color='w',linewidth=10)
-# sns.lineplot(data=net_td,color='w')
-# sns.lineplot(data=net_td,color='w',alpha=0.7)
-
-plt.show()
-
-
-# In[41]:
-
-
-fig = plt.figure(figsize=(16,4))
-ax = fig.add_subplot(1,1,1)
-ax.plot(net_timestamp,net_td.depth,color='g')
-
-
-# In[44]:
-
-
-sns.tsplot(data=net_td.depth,time=net_td.index)
-
-
-# In[45]:
-
-
-net_td.plot()
-
-
-# In[139]:
-
-
-type(net_depth_on_adcp_timestamp)
-
-
-# In[26]:
-
-
-pd.concat([data, ts]).sort_index().interpolate().reindex(ts.index)
-
-
-# In[27]:
-
-
-pd.concat([data, ts]).sort_index().interpolate()[ts.index]
-
-
-# In[29]:
-
-
-x = pd.concat([data, ts])
-x.groupby(x.index).first()
-
-
-# In[30]:
-
-
-x.index
-
-
-# In[33]:
-
-
-x
 
